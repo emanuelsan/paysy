@@ -105,6 +105,10 @@ class PaymentController extends Controller
             )
         );
 
+//        $apiContext->setConfig([
+//            'mode' => 'live'
+//        ]);
+
         $creditCardToken = new CreditCardToken();
         $creditCardToken->setCreditCardId($cardId);
 
@@ -139,7 +143,7 @@ class PaymentController extends Controller
 
         try {
             $payment->create($apiContext);
-        } catch (PayPalConnectionException $ex) {
+        } catch (PayPalConnectionException $exception) {
             $data = json_decode($exception->getData());
             return redirect()->route('select')->withErrors([$data->message,$data->details]);
         }

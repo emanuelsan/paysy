@@ -30,6 +30,10 @@ class CustomerController extends Controller
                 )
             );
 
+//        $apiContext->setConfig([
+//            'mode' => 'live'
+//        ]);
+
         $card = new CreditCard();
 
         //Set card information for PayPal
