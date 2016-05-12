@@ -15,9 +15,12 @@ class CreateCustomersTable extends Migration
         Schema::create('customers', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name');
-            $table->string('external_card_id');
-            $table->string('card_id')->index();
+            $table->string('booking_id');
+            $table->integer('room_id')->unsigned()->nullable();
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('room_id')->references('id')->on('rooms')->onDelete('set null');
         });
     }
 
@@ -28,6 +31,9 @@ class CreateCustomersTable extends Migration
      */
     public function down()
     {
+        Schema::table('customers', function (Blueprint $table) {
+            $table->dropForeign('customers_room_id_foreign');
+        });
         Schema::drop('customers');
     }
 }

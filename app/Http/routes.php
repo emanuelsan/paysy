@@ -11,14 +11,19 @@
 |
 */
 
-Route::get('/', 'CustomerController@welcome');
-Route::post('/addCustomer', ['as'=>'addCustomer' , 'uses'=>'CustomerController@addCustomer']);
+Route::get('/', ['as'=> 'welcome', 'uses' => 'CustomerController@welcome']);
+Route::get('/pay/{customer}', ['as' => 'customerPaymentPage', 'uses' => 'PaymentController@customerPaymentPage']);
+Route::post('/pay/{customer}', ['as' => 'customerPayment', 'uses' => 'PaymentController@customerPayment']);
 
 $this->get('emanuelsan', 'Auth\AuthController@showLoginForm');
 $this->post('emanuelsan', 'Auth\AuthController@login');
 $this->get('logout', 'Auth\AuthController@logout');
 
-Route::get('/select', ['middleware' => 'auth', 'as'=>'select', 'uses'=>'PaymentController@select']);
-Route::post('/selectcard', ['middleware' => 'auth', 'as'=>'selectcard', 'uses'=>'PaymentController@selectcard']);
-Route::post('/confirm', ['middleware' => 'auth', 'as'=>'confirm', 'uses'=>'PaymentController@confirm']);
-Route::post('/withdraw', ['middleware' => 'auth', 'as'=>'withdraw', 'uses'=>'PaymentController@withdraw']);
+Route::group(['middleware' => 'auth','prefix' => 'admin'], function () {
+    Route::get('/', ['as' => 'dashboard', 'uses' => 'AdminController@dashboard']);
+    
+    Route::resource('rooms', 'RoomController');
+    Route::resource('customers', 'AdminCustomerController');
+    Route::resource('payments', 'AdminPaymentController');
+
+});

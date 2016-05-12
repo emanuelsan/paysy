@@ -23,80 +23,32 @@ use PayPal\Api\Payer;
 use PayPal\Api\Payment;
 use PayPal\Api\Transaction;
 
+use Hashids;
+
+use Illuminate\Http\Request;
+
 class PaymentController extends Controller
 {
-    public function select()
+
+    public function customerPaymentPage(Request $request, $customer)
     {
-        $apiContext = new ApiContext(
-            new OAuthTokenCredential(
-                env('CLIENT_ID'),     // ClientID
-                env('CLIENT_SECRET')      // ClientSecret
-            )
-        );
-
-        $customers = Customer::all();
-
-        $cards = [];
-
-        $errors = [];
-
-        foreach ($customers as $customer)
-        {
-            try {
-                $card = CreditCard::get($customer->card_id, $apiContext);
-            }
-            catch (\Exception $exception) {
-                array_push($errors, $exception);
-            }
-            array_push($cards, $card);
-
+        $customer = Customer::findOrFail(Hashids::decode($customer));
+        if ($customer->isEmpty())
+            abort(404);
+        if (is_a($customer, "Illuminate\Database\Eloquent\Collection")) {
+            $customer = $customer->first();
         }
-
-        $customers = $customers->filter(function(Customer $item) use ($cards){
-            foreach ($cards as $card)
-            {
-                if ($card->external_card_id == $item->external_card_id)
-                    return true;
-            }
-            return false;
-        });
-
-        return view('select')->with([
-            'cards' => $cards,
-            'errors' => $errors,
-            'customers' => $customers
-        ]);
+        return view('customer_payment', ['customer' => $customer]);
     }
 
-    public function selectcard(SelectCardRequest $request)
+    public function customerPayment(Request $request, $customer)
     {
-        $customer = Customer::whereCardId($request->input('card_id'))->first();
-
-        if (!$customer)
-            return abort(404);
-
-        return view('withdraw')->with([
-            'customer' => $customer
-        ]);
-    }
-
-    public function confirm(ConfirmCardRequest $request)
-    {
-        $customer = Customer::whereCardId($request->input('card_id'))->first();
-
-        if (!$customer)
-            return abort(404);
-
-        return view('confirm')->with([
-            'customer' => $customer,
-            'amount' => $request->input('amount')
-        ]);
-    }
-
-    public function withdraw(WithdrawRequest $request)
-    {
-        $amountSum = $request->input('amount');
-        $cardId = $request->input('card_id');
+        $customer = Customer::findOrFail(Hashids::decode($customer));
+        if ($customer->isEmpty())
+            abort(404);
+        if (is_a($customer, "Illuminate\Database\Eloquent\Collection")) {
+            $customer = $customer->first();
+        }
 
         $apiContext = new ApiContext(
             new OAuthTokenCredential(
@@ -109,31 +61,52 @@ class PaymentController extends Controller
 //            'mode' => 'live'
 //        ]);
 
-        $creditCardToken = new CreditCardToken();
-        $creditCardToken->setCreditCardId($cardId);
+        $card = new CreditCard();
 
-        $fi = new FundingInstrument(); $fi->setCreditCardToken($creditCardToken);
+        $parts = explode(" ", $request->input('creditcardholder'));
+        $lastname = array_pop($parts);
+        $firstname = implode(" ", $parts);
+
+        $card->setType($request->input('creditcardtype'))
+            ->setNumber($request->input('creditcardnumber'))
+            ->setExpireMonth($request->input('expiremonth'))
+            ->setExpireYear($request->input('expireyear'))
+            ->setCvv2($request->input('cvv2'))
+            ->setFirstName($firstname)
+            ->setLastName($lastname);
+
+        $fi = new FundingInstrument();
+        $fi->setCreditCard($card);
 
         $payer = new Payer();
-        $payer->setPaymentMethod("credit_card")->setFundingInstruments(array($fi));
+        $payer->setPaymentMethod("credit_card")
+            ->setFundingInstruments(array($fi));
 
-        $service = new Item();
-        $service->setName('Web Development Services')
-            ->setCurrency('USD')
-            ->setQuantity(1)
-            ->setPrice($amountSum);
+        $items = [];
+        $total = 0;
+        foreach($customer->billables as $billable)
+        {
+            $item = new Item();
+            $item->setName($billable->name);
+            $item->setCurrency(env('CURRENCY'));
+            $item->setQuantity($billable->quantity);
+            $item->setTax(0.0);
+            $item->setPrice($billable->price);
+            $total += $billable->price * $billable->quantity;
+            $items[] = $item;
+        }
 
         $itemList = new ItemList();
-        $itemList->setItems(array($service));
+        $itemList->setItems($items);
 
         $amount = new Amount();
-        $amount->setCurrency("USD")
-            ->setTotal($amountSum);
+        $amount->setCurrency(env('CURRENCY'))
+            ->setTotal($total);
 
         $transaction = new Transaction();
         $transaction->setAmount($amount)
             ->setItemList($itemList)
-            ->setDescription("Web Development Services to Websy via Paysy")
+            ->setDescription("Stay at Riviera Apartments")
             ->setInvoiceNumber(uniqid());
 
         $payment = new Payment();
@@ -145,21 +118,25 @@ class PaymentController extends Controller
             $payment->create($apiContext);
         } catch (PayPalConnectionException $exception) {
             $data = json_decode($exception->getData());
-            return redirect()->route('select')->withErrors([$data->message,$data->details]);
+            return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors([$data->message,$data->details]);
         }
 
         if ($payment->state == "approved")
         {
             \App\Payment::create([
-                'amount' => $amountSum,
-                'id' => $payment->id,
-                'card_id' => $cardId,
-                'invoice_number' => $payment->transactions[0]->invoice_number
+                'amount' => $payment->transactions[0]->related_resources[0]->sale->amount->total,
+                'customer_id' => $customer->id,
+                'sale_id' => $payment->id,
+                'invoice_id' => $payment->transactions[0]->invoice_number
             ]);
-            return redirect()->route('select')->with(['success'=>$payment->id]);
+
+            $customer->delete();
+
+            return view('thankyou',['invoice_id'=>$payment->transactions[0]->invoice_number]);
         }
         else {
-            return redirect()->route('select')->withErrors(['Payment not approved']);
+            return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors(['Payment not approved']);
         }
     }
+
 }

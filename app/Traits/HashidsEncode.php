@@ -12,9 +12,9 @@ trait HashidsEncode
      * @param  $value
      * @return string
      */
-    public function getIdAttribute($value)
+    public function getHashIdAttribute($value)
     {
-        return Hashids::encode($value);
+        return Hashids::encode($this->id);
     }
 
 }

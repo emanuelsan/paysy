@@ -3,7 +3,7 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreatePaymentsTable extends Migration
+class CreateBillablesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -12,16 +12,15 @@ class CreatePaymentsTable extends Migration
      */
     public function up()
     {
-        Schema::create('payments', function (Blueprint $table) {
+        Schema::create('billables', function (Blueprint $table) {
             $table->increments('id');
-            $table->decimal('amount',12,2)->unsigned();
+            $table->string('name');
+            $table->integer('quantity')->unsigned();
+            $table->decimal('price',12,2)->unsigned();
             $table->integer('customer_id')->unsigned()->nullable();
-            $table->string('invoice_id');
-            $table->string('sale_id');
             $table->timestamps();
 
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('set null');
-
         });
     }
 
@@ -32,9 +31,9 @@ class CreatePaymentsTable extends Migration
      */
     public function down()
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->dropForeign('payments_customer_id_foreign');
+        Schema::table('billables', function (Blueprint $table) {
+            $table->dropForeign('billables_customer_id_foreign');
         });
-        Schema::drop('payments');
+        Schema::drop('billables');
     }
 }

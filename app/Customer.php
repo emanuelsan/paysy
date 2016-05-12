@@ -4,6 +4,7 @@ namespace App;
 
 use App\Traits\HashidsEncode;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 
 /**
@@ -26,6 +27,19 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HashidsEncode;
+    use SoftDeletes;
     
-    protected $fillable = ['name','external_card_id','external_customer_id'];
+    protected $fillable = ['name','booking_id','room_id'];
+
+    protected $dates = ['deleted_at'];
+    
+    public function room()
+    {
+        return $this->belongsTo('\App\Room');
+    }
+
+    public function billables()
+    {
+        return $this->hasMany('\App\Billable');
+    }
 }

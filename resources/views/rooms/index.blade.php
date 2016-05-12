@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-    <h2>Confirm</h2>
+    <h2>Show Rooms</h2>
     <h3>{{$customer->name}} - ${{$amount}}</h3>
 
     <div class="row">
