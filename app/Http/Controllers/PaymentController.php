@@ -43,7 +43,7 @@ class PaymentController extends Controller
 
     public function customerPayment(Request $request, $customer)
     {
-        $customer = Customer::findOrFail(Hashids::decode($customer));
+	    $customer = Customer::findOrFail(Hashids::decode($customer));
         if ($customer->isEmpty())
             abort(404);
         if (is_a($customer, "Illuminate\Database\Eloquent\Collection")) {
@@ -129,7 +129,6 @@ class PaymentController extends Controller
 	        debug($exception);
 	        return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors([$data->message,$data->details]);
         }
-        dd($payment);
 
         if ($payment->state == "approved")
         {
