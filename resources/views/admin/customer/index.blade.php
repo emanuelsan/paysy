@@ -17,7 +17,7 @@
             <td>{{$customer->hash_id}}</td>
             <td>{{$customer->name}}</td>
             <td>{{$customer->booking_id}}</td>
-            <td>{{$customer->room->name}}</td>
+{{--            <td>{{$customer->room->name}}</td>--}}
             <td>DeleteLink</td>
         </tr>
         @endforeach

@@ -57,9 +57,11 @@ class PaymentController extends Controller
             )
         );
 
-//        $apiContext->setConfig([
-//            'mode' => 'live'
-//        ]);
+	    if (env('PAYPAL_LIVE') && strtolower(env('PAYPAL_LIVE')) == "live") {
+		    $apiContext->setConfig([
+			    'mode' => 'live'
+		    ]);
+	    }
 
         $card = new CreditCard();
 
@@ -117,9 +119,17 @@ class PaymentController extends Controller
         try {
             $payment->create($apiContext);
         } catch (PayPalConnectionException $exception) {
-            $data = json_decode($exception->getData());
-            return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors([$data->message,$data->details]);
+	        debug($exception);
+	        debug($exception->getCode());
+	        debug($exception->getData());
+	        return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors(['PayPal Error Ocurred']);
         }
+        catch (Exception $exception) {
+	        $data = json_decode($exception->getData());
+	        debug($exception);
+	        return redirect()->route('customerPaymentPage',['customer'=>$customer->hash_id])->withErrors([$data->message,$data->details]);
+        }
+        dd($payment);
 
         if ($payment->state == "approved")
         {

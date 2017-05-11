@@ -19,7 +19,7 @@ class CustomerController extends Controller
         } else {
             $customer = Customer::findOrFail(Hashids::decode($request->input('customer')));
             if (!$customer->isEmpty())
-                return $customer;
+                return redirect()->action('PaymentController@customerPaymentPage',['customer'=>$request->input('customer')]);
             abort(404);
         }
     }
